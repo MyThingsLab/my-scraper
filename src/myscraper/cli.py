@@ -62,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
                     "answer": result.answer,
                     "fields": result.fields,
                     "confidence": result.confidence,
+                    "quote": result.quote,
                     "detail": result.detail,
                     "comment_url": result.comment_url,
                 }

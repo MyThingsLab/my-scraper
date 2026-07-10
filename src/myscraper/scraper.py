@@ -35,6 +35,7 @@ class Result:
     fields: dict[str, Any]
     answer: str = ""
     confidence: str = ""
+    quote: str = ""
     detail: str = ""
     comment_url: str | None = None
 
@@ -96,6 +97,7 @@ class Scraper:
             fields=reply["fields"],
             answer=reply["answer"],
             confidence=reply["confidence"],
+            quote=reply.get("quote", ""),
             detail=f"extracted from {url}",
             comment_url=comment_url,
         )
@@ -121,7 +123,7 @@ class Scraper:
             return None
         body = f"Extracted from {url}:\n\n```json\n{json.dumps(reply, indent=2)}\n```"
         argv = ["issue", "comment", str(issue), "--repo", self.repo, "--body", body]
-        action = Action(kind="bash", payload={"command": "gh " + " ".join(argv[:3])})
+        action = Action(kind="bash", payload={"command": "gh " + " ".join(argv)})
         decision = self.policy.evaluate(action).under(unattended=in_github_actions())
         if decision is not Decision.ALLOW:
             return None
@@ -136,6 +138,7 @@ class Scraper:
             url=result.url,
             question=result.question,
             fields=result.fields,
+            quote=result.quote,
             comment_url=result.comment_url,
         )
 

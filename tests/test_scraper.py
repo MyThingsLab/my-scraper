@@ -53,9 +53,11 @@ def test_extract_uses_engine_reply(tmp_path: Path) -> None:
     assert result.fields == {"price": "$9"}
     assert result.answer == "$9"
     assert result.confidence == "high"
+    assert result.quote == "Price: $9"
     entries = list(ledger)
     assert entries[-1].kind == "scrape"
     assert entries[-1].data["url"] == "https://example.com/x"
+    assert entries[-1].data["quote"] == "Price: $9"
 
 
 def test_extract_falls_back_to_raw_text_against_noop_engine(tmp_path: Path) -> None:
@@ -123,6 +125,7 @@ def test_invented_quote_is_dropped_and_confidence_forced_low(tmp_path: Path) -> 
     )
     result = scraper.extract("https://example.com/x", "what is the price?")
     assert result.confidence == "low"
+    assert result.quote == ""
 
 
 def test_comment_posts_extracted_record_when_requested(tmp_path: Path) -> None:
@@ -139,6 +142,34 @@ def test_comment_posts_extracted_record_when_requested(tmp_path: Path) -> None:
     result = scraper.extract("https://example.com/x", "q?", issue=5, comment=True)
     assert result.comment_url is not None
     assert fake.calls[0][:2] == ["issue", "comment"]
+
+
+def test_comment_policy_sees_full_gh_command(tmp_path: Path) -> None:
+    ledger = Ledger(tmp_path / "ledger.jsonl")
+    fake = FakeRunner()
+
+    class CapturePolicy:
+        def __init__(self) -> None:
+            self.actions: list[Action] = []
+
+        def evaluate(self, action: Action) -> PolicyResult:
+            self.actions.append(action)
+            return PolicyResult(Decision.ALLOW, reason="ok", rule="test")
+
+    policy = CapturePolicy()
+    scraper = Scraper(
+        ledger=ledger,
+        repo="owner/name",
+        runner=fake,
+        engine=NoopEngine(),
+        policy=policy,
+        get=_get("<p>x</p>"),
+        robots_allowed=lambda url, ua: True,
+    )
+    scraper.extract("https://example.com/x", "q?", issue=5, comment=True)
+    command = policy.actions[0].payload["command"]
+    assert "--repo owner/name" in command
+    assert "--body" in command
 
 
 def test_comment_skipped_without_issue(tmp_path: Path) -> None:
