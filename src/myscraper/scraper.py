@@ -5,12 +5,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mythings.engine import Engine, EngineRequest, NoopEngine
+from mythings.fetch import Getter, RobotsChecker, default_get, default_robots_allowed, fetch
 from mythings.github import Runner, _gh
 from mythings.isolation import in_github_actions
 from mythings.ledger import Ledger
 from mythings.policy import ALLOW, Action, Decision, Policy, PolicyResult
-
-from myscraper.fetcher import Getter, RobotsChecker, _default_get, _default_robots_allowed, fetch
 
 _ENGINE_SYSTEM = (
     "You extract structured data from a web page's text to answer a question. "
@@ -49,8 +48,8 @@ class Scraper:
         runner: Runner = _gh,
         engine: Engine | None = None,
         policy: Policy | None = None,
-        get: Getter = _default_get,
-        robots_allowed: RobotsChecker = _default_robots_allowed,
+        get: Getter = default_get,
+        robots_allowed: RobotsChecker = default_robots_allowed,
         max_chars: int = _DEFAULT_MAX_CHARS,
     ) -> None:
         self.ledger = ledger
@@ -70,7 +69,12 @@ class Scraper:
         issue: int | None = None,
         comment: bool = False,
     ) -> Result:
-        fetched = fetch(url, get=self._get, robots_allowed=self._robots_allowed)
+        fetched = fetch(
+            url,
+            get=self._get,
+            robots_allowed=self._robots_allowed,
+            max_chars=self.max_chars,
+        )
         if not fetched.ok:
             result = Result(
                 outcome="skipped",
@@ -82,12 +86,7 @@ class Scraper:
             self._record(result)
             return result
 
-        text = fetched.text
-        truncated = len(text) > self.max_chars
-        if truncated:
-            text = text[: self.max_chars]
-
-        reply = self._extract(text, question, url, truncated)
+        reply = self._extract(fetched.text, question, url, fetched.truncated)
         comment_url = self._comment(issue, url, reply) if comment else None
 
         result = Result(
