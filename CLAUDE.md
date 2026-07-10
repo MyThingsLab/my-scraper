@@ -18,10 +18,10 @@ covered here defers to `HARNESS.md`, then `my-things-core/docs/CONVENTIONS.md`.
   `confidence` forced to `"low"`. Against `NoopEngine`: no extraction — emits
   the raw cleaned text verbatim as `fields.raw_text`.
 - **Invariants / rules:**
-  - All network is deterministic, stdlib-only HTTP/HTML
-    (`urllib.request`, `urllib.robotparser`, `html.parser`) — no new runtime
-    SDK, stays outside the one-Engine-call contract. Mocked in the default test
-    suite; any real-network test is `@pytest.mark.slow`.
+  - All fetching goes through the core `mythings.fetch` seam — deterministic,
+    stdlib-only HTTP/HTML (`urllib`, `html.parser`), no new runtime SDK, outside
+    the one-Engine-call contract. Inject `get`/`robots_allowed` to mock the
+    network in the default suite; any real-network test is `@pytest.mark.slow`.
   - **Never crawls.** One URL per invocation, no link-following.
   - `robots.txt` is checked before fetching; a disallow skips the fetch and the
     Engine call (`outcome=skipped`) — never bypassed or spoofed around.
