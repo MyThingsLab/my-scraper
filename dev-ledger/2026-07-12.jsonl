@@ -1,0 +1,1 @@
+{"data":{"files":"tests/","session":"2026-07-12"},"detail":"Mechanical migration to mythings.testing: inline ScriptedEngine (requests->calls rename) and the comment-only FakeRunner replaced by the shared ScriptedEngine/FakeGh.","kind":"build","outcome":"success","tool":"claude-code","ts":"2026-07-12T10:18:17Z"}

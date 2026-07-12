@@ -3,22 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from mythings.engine import EngineRequest, EngineResult, NoopEngine
+from mythings.engine import NoopEngine
 from mythings.ledger import Ledger
 from mythings.policy import Action, Decision, PolicyResult
 
-from conftest import FakeRunner
+from conftest import ScriptedEngine, fake_gh
 from myscraper.scraper import Scraper
-
-
-class ScriptedEngine:
-    def __init__(self, reply: str) -> None:
-        self._reply = reply
-        self.requests: list[EngineRequest] = []
-
-    def run(self, request: EngineRequest) -> EngineResult:
-        self.requests.append(request)
-        return EngineResult(text=self._reply)
 
 
 class DenyPolicy:
@@ -85,7 +75,7 @@ def test_extract_skips_engine_call_when_robots_disallow(tmp_path: Path) -> None:
     result = scraper.extract("https://example.com/x", "q?")
     assert result.outcome == "skipped"
     assert "robots_disallowed" in result.detail
-    assert engine.requests == []
+    assert engine.calls == []
     entries = list(ledger)
     assert entries[-1].outcome == "skipped"
 
@@ -102,7 +92,7 @@ def test_extract_skips_engine_call_on_fetch_failure(tmp_path: Path) -> None:
     )
     result = scraper.extract("https://example.com/x", "q?")
     assert result.outcome == "skipped"
-    assert engine.requests == []
+    assert engine.calls == []
 
 
 def test_invented_quote_is_dropped_and_confidence_forced_low(tmp_path: Path) -> None:
@@ -130,7 +120,7 @@ def test_invented_quote_is_dropped_and_confidence_forced_low(tmp_path: Path) -> 
 
 def test_comment_posts_extracted_record_when_requested(tmp_path: Path) -> None:
     ledger = Ledger(tmp_path / "ledger.jsonl")
-    fake = FakeRunner()
+    fake = fake_gh()
     scraper = Scraper(
         ledger=ledger,
         repo="owner/name",
@@ -146,7 +136,7 @@ def test_comment_posts_extracted_record_when_requested(tmp_path: Path) -> None:
 
 def test_comment_policy_sees_full_gh_command(tmp_path: Path) -> None:
     ledger = Ledger(tmp_path / "ledger.jsonl")
-    fake = FakeRunner()
+    fake = fake_gh()
 
     class CapturePolicy:
         def __init__(self) -> None:
@@ -199,7 +189,7 @@ def test_comment_skipped_without_repo(tmp_path: Path) -> None:
 
 def test_comment_denied_by_policy_is_not_posted(tmp_path: Path) -> None:
     ledger = Ledger(tmp_path / "ledger.jsonl")
-    fake = FakeRunner()
+    fake = fake_gh()
     scraper = Scraper(
         ledger=ledger,
         repo="owner/name",
@@ -251,5 +241,5 @@ def test_max_chars_truncates_before_engine_prompt(tmp_path: Path) -> None:
         max_chars=10,
     )
     scraper.extract("https://example.com/x", "q?")
-    assert engine.requests[0].context["truncated"] is True
-    assert engine.requests[0].context["fetched_chars"] == 10
+    assert engine.calls[0].context["truncated"] is True
+    assert engine.calls[0].context["fetched_chars"] == 10
