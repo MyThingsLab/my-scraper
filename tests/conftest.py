@@ -1,13 +1,10 @@
 from __future__ import annotations
 
+# Shared fakes come from mythings.testing; only the comment-URL wiring is local.
+from mythings.testing import FakeGh, ScriptedEngine
 
-class FakeRunner:
-    def __init__(self, comment_url: str = "https://github.com/owner/name/issues/1#comment") -> None:
-        self.calls: list[list[str]] = []
-        self._comment_url = comment_url
+__all__ = ["ScriptedEngine"]
 
-    def __call__(self, argv: list[str]) -> str:
-        self.calls.append(argv)
-        if argv[:2] == ["issue", "comment"]:
-            return self._comment_url + "\n"
-        raise AssertionError(f"unexpected gh call: {argv}")
+
+def fake_gh(comment_url: str = "https://github.com/owner/name/issues/1#comment") -> FakeGh:
+    return FakeGh({("issue", "comment"): comment_url + "\n"})
